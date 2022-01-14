@@ -13,6 +13,56 @@
 
 	<body>
 		<script>
+			"use strict";
+
+		    let pg, h2n;
+			let sW = 800;
+			let sH = 800;
+
+		    function setup() {
+			    createCanvas(windowHeight, windowHeight);
+		        background(0);
+
+		        pg = createGraphics(sW, sH, WEBGL);
+		        h2n = new HeightToNormal(sW, sH);
+		    }
+
+		    function draw() {
+		    	const mX = (sW * (mouseX / width)) - (sW / 2);
+		    	const mY = (sH * (mouseY / height)) - (sH / 2);
+
+		        pg.push();
+		        pg.strokeWeight(3);
+		        pg.stroke(100);
+		        pg.fill(255);
+		        pg.ellipse(mX, mY, 150);
+		        pg.pop();
+
+		        /*
+		            last two arguments are optional
+		            strength -  Strength of the normal. Values closer 
+		                        to 0 will make z component of vectors
+		                        have more influence pointing 'outwards'.
+		                        Typical values: 0.001 - 10
+		                        Default value is 2.
+
+		            level - Typical values: 5 - 7.
+		                    Larger values will make the z component of the normal 
+		                    vector have a stronger influence.
+		                    Default value is 7.
+		        */
+		        let normalMap = h2n.get(pg, 2, 7);
+
+		        image(normalMap, 0, 0, width, height);
+		    }
+
+		    function mousePressed() {
+		        pg.filter(BLUR, 1);
+		    }
+
+			function windowResized() {
+				resizeCanvas(windowHeight, windowHeight);
+			}
 		</script>
 	</body>
 
