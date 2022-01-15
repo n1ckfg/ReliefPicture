@@ -15,8 +15,9 @@
 		<script>
 			"use strict";
 
-		    let pg, matte, h2n;
-			let img, normalMap;
+		    let pg, matte, imgCrop; // PGraphics
+			let img, normalMap; // PImage
+		    let h2n; // HeightToNormal
 			let sW = 800;
 			let sH = 800;
 
@@ -29,6 +30,23 @@
 		        background(0);
 		        pixelDensity(1);
 		        
+		        let offset = createVector(0, 0);
+
+		        if (img.width > img.height) {
+		        	let ratio = img.width / img.height;
+		        	img.resize(sW * ratio, sW);
+		        	offset.x = (img.width - img.height) / -2;
+		        } else if (img.height > img.width) {
+		        	let ratio = img.height / img.width;
+		        	img.resize(sH, sH * ratio);
+		        	offset.y = (img.height - img.width) / -2;
+		        }
+
+		        imgCrop = createGraphics(sW, sH);
+		        imgCrop.push();
+		        imgCrop.image(img, offset.x, offset.y);
+		        imgCrop.pop();
+
 		        pg = createGraphics(sW, sH, WEBGL);
 
 		        matte = createGraphics(sW, sH, WEBGL);
@@ -50,27 +68,39 @@
 		                    vector have a stronger influence.
 		                    Default value is 7.
 		        */
-		        normalMap = h2n.get(img, 2, 7);
+		        normalMap = h2n.get(imgCrop, 2, 7);
 		    }
 
 		    function draw() {
 		    	if (mouseIsPressed) {
 			    	const mX = (sW * (mouseX / width)) - (sW / 2);
 			    	const mY = (sH * (mouseY / height)) - (sH / 2);
+
 			        matte.push();
+		    		matte.blendMode(BLEND);
 			        matte.noStroke();
-			        matte.fill(255);
-			        matte.ellipse(mX, mY, 150);
+			        matte.fill(255, 64);
+			        matte.ellipse(mX, mY, 140);
+			        matte.ellipse(mX, mY, 120);
+			        matte.ellipse(mX, mY, 100);
+			        matte.ellipse(mX, mY, 80);
+
+					matte.blendMode(MULTIPLY);			        
+					matte.image(normalMap, -matte.width/2, -matte.height/2, matte.width, matte.height);
 			        matte.pop();
 		    	}
 
 		        pg.push();
 		        pg.blendMode(BLEND);
-		        pg.image(normalMap, -pg.width/2, -pg.height/2, pg.width, pg.height);
+		        pg.image(imgCrop, -pg.width/2, -pg.height/2, pg.width, pg.height);
 		        pg.blendMode(MULTIPLY);
 		        pg.image(matte, -pg.width/2, -pg.height/2, pg.width, pg.height);
 		        pg.pop();
 
+		        blendMode(BLEND);
+		        image(pg, 0, 0, width, height);
+
+		        blendMode(ADD);
 		        image(pg, 0, 0, width, height);
 		    }
 
