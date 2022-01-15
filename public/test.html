@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+        <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1">
+		<title>PhotoUrl</title>
+		<link type="text/css" rel="stylesheet" href="./css/main.css"/>
+		<script type="text/javascript" src="./js/libraries/p5.min.js"></script>
+		<script type="text/javascript" src="./js/libraries/p5.speech.js"></script>
+		<script type="text/javascript" src="./js/libraries/jquery.min.js"></script>
+		<script type="text/javascript" src="./js/libraries/jquery.xdomainajax.js"></script>
+	</head>
+	
+	<body>
+		<script>
+			"use strict";
+
+			let myVoice = new p5.Speech();
+			let myRec = new p5.SpeechRec(); // new P5.SpeechRec object
+			myRec.continuous = true; // do continuous recognition
+			myRec.interimResults = false; // allow partial recognition (faster, less accurate)
+
+			let displayTextWait = "CLICK ME";
+			let displayTextRec = "SPEAK";
+			let displayTextError = "ERROR";
+			let displayText = displayTextWait;
+			let sayText = "";
+			let lastSayText = "";
+
+			let resultColor, waitColor, recColor, currentColor;
+			let markTime = 0;
+			let timeOut = 3000; // ms
+			let ready = true;
+			let hasError = false;
+
+			function setup() {
+			    createCanvas(256, 256);
+
+			    resultColor = color(192, 255, 192);
+			    recColor = color(255, 192, 192);
+			    waitColor = color(235, 235, 255);
+			    currentColor = waitColor;
+
+			    textSize(20);
+			    textAlign(CENTER);
+
+			    myRec.onResult = parseResult;
+			    myRec.onStart = setToRec;
+			    myRec.onEnd = setToWait;
+			    myRec.onError = setToError;
+			}
+
+			function draw() {
+			    if (!ready && !hasError && millis() > markTime + timeOut) {
+			        setToRec();
+			    }
+
+			    background(currentColor);
+			    text(displayText, width/2, height/2);
+			}
+
+			//function windowResized() {
+			    //resizeCanvas(windowWidth, windowHeight);
+			//}
+
+			function parseResult() {
+			    // recognition system will often append words into phrases.
+			    // so hack here is to only use the last word:
+			    if (ready && myRec.resultValue) {
+			        lastSayText = sayText;
+			        sayText = myRec.resultString.split(' ').pop();
+
+			        if (sayText != lastSayText) {
+			            displayText = sayText;
+
+			            currentColor = resultColor;
+			            text(displayText, 20, 20);
+
+			            //submitWord(displayText);
+			            myVoice.speak(displayText);
+
+			            doSearch(displayText);
+
+			            markTime = millis();
+			            ready = false;
+			        }
+			    }
+			}
+
+			function setToWait() {
+			    currentColor = waitColor;
+			    displayText = displayTextWait;
+			    ready = true;
+			}
+
+			function setToError() {
+			    currentColor = waitColor;
+			    displayText = displayTextError;
+			    hasError = true;
+			    ready = false;
+			}
+
+			function setToRec() {
+			    currentColor = recColor;
+			    displayText = displayTextRec;
+			    ready = true;
+			}
+
+			function uniqueId() {
+			    console.log("uniqueId");
+			    return Math.random().toString(36).replace("0.", Date.now().toString(36));
+			}
+
+			function submitWord(words) {
+			    try {
+			        console.log("submitword"); 
+			        let http = new XMLHttpRequest();
+			        let url = "word";
+			        let params = "id=" + uniqueId() + "&words=" + words;//.join(",");
+			        http.open("POST", url, true);
+
+			        // Send the proper header information along with the request
+			        http.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+			        http.send(params);
+			    } catch (err) { 
+			        console.log(err);
+			        setToError();
+			    }
+			}
+
+			function triggerStarted() {
+			    if (ready) {
+			        setToRec();
+			        myRec.start();
+			    }
+			}
+
+			function touchStarted() {
+			    triggerStarted();
+			}
+
+			function mousePressed() {
+			    triggerStarted();
+			}
+
+			// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+
+			let query = "garage";
+			let lineArtOnly = false;
+			let numReturns = 10;
+			let searchMode = 0;
+			let queryPrepend = "https://images.google.com/images?q=";
+			let queryAppend = "&hl=en&imgsz=Medium";
+			let queryLineArt = "&tbs=itp:lineart";
+			let userAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36";
+			let answerPrepend = "";
+			let answerAppend = "";
+			let spaceBad = "%252520";
+			let spaceGood = "%20";
+
+			let photoPaths = [];
+			let photos = [];
+
+			function doSearch(_query) {
+			    if (searchMode == 0) {
+			        answerPrepend = "imgres?imgurl=";
+			        answerAppend = "&amp;imgrefurl";        
+			    } else if (searchMode == 1) {
+			        answerPrepend = "\"ou\":\"";
+			        answerAppend = "\",\"ow\":";        
+			    }
+
+			    if (lineArtOnly) queryAppend += queryLineArt;
+
+			    //let numTries = 0;
+			    let q = _query.replace(" ", "%20");
+			    let url = queryPrepend + q + queryAppend;
+			    console.log("Query is: " + url);
+
+			    // TODO set user agent
+
+			    let answerOrig = "";
+			    let answer = "";
+
+			    $.get(url, function(data, status) {
+
+			        photoPaths = [];
+
+			        for (let property in data) {
+			            answerOrig = data[property].toString();
+			        }
+
+			        //console.log(answerOrig);
+
+			        //while (numTries < numReturns) {
+			        while (photoPaths.length < numReturns) {
+			            answer = answerOrig;
+			            let startIndex = answer.indexOf(answerPrepend);
+			            answer = answer.substring(startIndex + answerPrepend.length);
+			            let endIndex = answer.indexOf(answerAppend); //"imgrefurl");
+			            answer = answer.substring(0, endIndex);//endIndex - 1);
+			            answerOrig = answerOrig.replace(answerPrepend + answer + answerAppend, "");
+			            answer = answer.replace(spaceBad, spaceGood);
+
+			            if (answer != null) {
+			            	console.log("* " + answer);
+			                photoPaths.push(answer);
+			            }
+			        }
+
+			        for (let i=0; i<photos.length; i++) {
+			            document.body.removeChild(photos[i]);
+			        }
+
+			        photos = [];
+
+			        for (let i=0; i<photoPaths.length; i++) {
+			            console.log(photoPaths[i]);
+			            let img = document.createElement("img");
+			            img.src = photoPaths[i];
+			            img.style.width = "100px";
+			            img.style.height = "100px";
+			            photos.push(img);
+			            document.body.appendChild(img);
+			        }
+			    });
+			}			
+		</script>
+	</body>
+
+</html>
