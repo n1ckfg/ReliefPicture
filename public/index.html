@@ -15,29 +15,28 @@
 		<script>
 			"use strict";
 
-		    let pg, h2n;
+		    let pg, matte, h2n;
+			let img, normalMap;
 			let sW = 800;
 			let sH = 800;
+
+			function preload() {
+				img = loadImage("./images/fish.jpg");
+			}
 
 		    function setup() {
 			    createCanvas(windowHeight, windowHeight);
 		        background(0);
-
+		        pixelDensity(1);
+		        
 		        pg = createGraphics(sW, sH, WEBGL);
+
+		        matte = createGraphics(sW, sH, WEBGL);
+		        matte.push();
+		        matte.background(0);
+		        matte.pop();
+
 		        h2n = new HeightToNormal(sW, sH);
-		    }
-
-		    function draw() {
-		    	const mX = (sW * (mouseX / width)) - (sW / 2);
-		    	const mY = (sH * (mouseY / height)) - (sH / 2);
-
-		        pg.push();
-		        pg.strokeWeight(3);
-		        pg.stroke(100);
-		        pg.fill(255);
-		        pg.ellipse(mX, mY, 150);
-		        pg.pop();
-
 		        /*
 		            last two arguments are optional
 		            strength -  Strength of the normal. Values closer 
@@ -51,13 +50,28 @@
 		                    vector have a stronger influence.
 		                    Default value is 7.
 		        */
-		        let normalMap = h2n.get(pg, 2, 7);
-
-		        image(normalMap, 0, 0, width, height);
+		        normalMap = h2n.get(img, 2, 7);
 		    }
 
-		    function mousePressed() {
-		        pg.filter(BLUR, 1);
+		    function draw() {
+		    	if (mouseIsPressed) {
+			    	const mX = (sW * (mouseX / width)) - (sW / 2);
+			    	const mY = (sH * (mouseY / height)) - (sH / 2);
+			        matte.push();
+			        matte.noStroke();
+			        matte.fill(255);
+			        matte.ellipse(mX, mY, 150);
+			        matte.pop();
+		    	}
+
+		        pg.push();
+		        pg.blendMode(BLEND);
+		        pg.image(normalMap, -pg.width/2, -pg.height/2, pg.width, pg.height);
+		        pg.blendMode(MULTIPLY);
+		        pg.image(matte, -pg.width/2, -pg.height/2, pg.width, pg.height);
+		        pg.pop();
+
+		        image(pg, 0, 0, width, height);
 		    }
 
 			function windowResized() {
@@ -70,7 +84,7 @@
 			function queryImage(_q) {
 			  const url = "https://ajax.googleapis.com/ajax/services/search/images?v=1.0&q=" + _q;
 			  console.log(url);
-			  loadJSON(url, imageResult);
+			  //loadJSON(url, imageResult);
 			}
 
 			function imageResult(result) {
