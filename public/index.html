@@ -20,6 +20,8 @@
 		    let h2n; // HeightToNormal
 			let sW = 800;
 			let sH = 800;
+			let m, pm, offset;
+			let dist = 0;
 
 			function preload() {
 				img = loadImage("./images/fish.jpg");
@@ -30,7 +32,9 @@
 		        background(0);
 		        pixelDensity(1);
 		        
-		        let offset = createVector(0, 0);
+		        offset = createVector(0, 0);
+		        m = createVector(0, 0);
+		        pm = createVector(0, 0);
 
 		        if (img.width > img.height) {
 		        	let ratio = img.width / img.height;
@@ -49,7 +53,7 @@
 
 		        pg = createGraphics(sW, sH, WEBGL);
 
-		        matte = createGraphics(sW, sH, WEBGL);
+		        matte = createGraphics(sW, sH);
 		        matte.push();
 		        matte.background(0);
 		        matte.pop();
@@ -71,22 +75,40 @@
 		        normalMap = h2n.get(imgCrop, 2, 7);
 		    }
 
+		    function getMouseAxis(isX, isWebGl) {
+		    	let returns;
+
+		    	if (isX) {
+		    		returns = sW * (mouseX / width);
+		    		if (isWebGl)  returns -= (sW / 2);
+		    	} else {
+		    		returns = sH * (mouseY / height);
+		    		if (isWebGl)  returns -= (sH / 2);
+		    	}
+
+		    	return returns;
+		    }
+
 		    function draw() {
 		    	if (mouseIsPressed) {
-			    	const mX = (sW * (mouseX / width)) - (sW / 2);
-			    	const mY = (sH * (mouseY / height)) - (sH / 2);
+		    		pm.x = m.x;
+		    		pm.y = m.y;
+			    	m.x = getMouseAxis(true, false);
+			    	m.y = getMouseAxis(false, false);
 
 			        matte.push();
 		    		matte.blendMode(BLEND);
 			        matte.noStroke();
 			        matte.fill(255, 64);
-			        matte.ellipse(mX, mY, 140);
-			        matte.ellipse(mX, mY, 120);
-			        matte.ellipse(mX, mY, 100);
-			        matte.ellipse(mX, mY, 80);
+			        dist = constrain(m.dist(pm), 10, 80) * 10;
+			        matte.ellipse(m.x, m.y, dist);
+			        matte.ellipse(m.x, m.y, dist - 20);
+			        matte.ellipse(m.x, m.y, dist - 40);
+			        matte.ellipse(m.x, m.y, dist - 60);
 
 					matte.blendMode(MULTIPLY);			        
-					matte.image(normalMap, -matte.width/2, -matte.height/2, matte.width, matte.height);
+					matte.image(normalMap, 0, 0);
+			        matte.filter(GRAY);
 			        matte.pop();
 		    	}
 
