@@ -18,6 +18,8 @@ const PORT = IS_HTTP ? PORT_HTTP : PORT_HTTPS;
 
 const PUBLIC_PATH = path.join(__dirname, "public");
 
+const updateInterval = 1000;
+
 // allow cross-domain access (CORS)
 const app = express();
 app.use(function(req, res, next) {
@@ -37,8 +39,8 @@ if (!IS_HTTP) {
 
 // create the primary server:
 const server = IS_HTTP ? http.createServer(app) : https.createServer({
-  key: fs.readFileSync(process.env.KEY_PATH),
-  cert: fs.readFileSync(process.env.CERT_PATH)
+    key: fs.readFileSync(process.env.KEY_PATH),
+    cert: fs.readFileSync(process.env.CERT_PATH)
 }, app);
 
 // serve static files from PUBLIC_PATH:
@@ -50,7 +52,12 @@ app.get("/", function(req, res) {
 
 // start the server:
 server.listen(PORT, function() {
-  console.log("\nNode.js listening on port " + PORT);
+    console.log("\nNode.js listening on port " + PORT);
+});
+
+const io = require("socket.io")(server, { 
+    pingInterval: 5000,
+    pingTimeout: 10000
 });
 
 // ~ ~ ~ ~ ~ ~   WEBHOOK   ~ ~ ~ ~ ~ ~ 
@@ -62,16 +69,16 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.json());
 
 const onWebhook = (req, res) => {
-  let hmac = crypto.createHmac("sha1", process.env.SECRET);
-  let sig  = `sha1=${hmac.update(JSON.stringify(req.body)).digest("hex")}`;
+    let hmac = crypto.createHmac("sha1", process.env.SECRET);
+    let sig  = `sha1=${hmac.update(JSON.stringify(req.body)).digest("hex")}`;
 
-  if (req.headers["x-github-event"] === "push" && sig === req.headers["x-hub-signature"]) {
-    cmd.run("chmod +x ./redeploy.sh"); 
-    cmd.run("./redeploy.sh");
-    cmd.run("refresh");
-  }
+    if (req.headers["x-github-event"] === "push" && sig === req.headers["x-hub-signature"]) {
+        cmd.run("chmod +x ./redeploy.sh"); 
+        cmd.run("./redeploy.sh");
+        cmd.run("refresh");
+    }
 
-  return res.sendStatus(200);
+    return res.sendStatus(200);
 }
 
 app.post("/redeploy", onWebhook);
@@ -80,3 +87,8 @@ app.get("/", function(req, res) {
     res.sendFile(__dirname + "/public/index.html");
 });
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
+
+setInterval(function() {
+    io.emit("newImage", "test");
+    console.log("Sending data.");
+}, updateInterval);

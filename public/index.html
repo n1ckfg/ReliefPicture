@@ -9,6 +9,8 @@
 		<link rel="stylesheet" href="./css/style.css">
 		<script src="./js/libraries/p5.min.js"></script>
 		<script src="./js/libraries/p5.HeightToNormal.js"></script>
+		<script src="./js/libraries/Tone.js"></script>
+		<script src="./js/libraries/socket.io.js"></script>
 	</head>
 
 	<body>
@@ -22,6 +24,37 @@
 			let sH = 800;
 			let m, pm, offset;
 			let dist = 0;
+
+			// https://tonejs.github.io/docs/r13/Noise
+			let audioAuthorized = false;
+			let noise, autoFilter;
+
+			document.addEventListener("mousedown", function() {
+				if (!audioAuthorized) {
+					Tone.start();
+
+					//initialize the noise and start
+					noise = new Tone.Noise("pink").start();
+
+					//make an autofilter to shape the noise
+					autoFilter = new Tone.AutoFilter({
+						"frequency" : "8m",
+						"min" : 800,
+						"max" : 15000
+					}).connect(Tone.Master);
+					
+					noise.connect(autoFilter); // connect the noise
+					autoFilter.start(); // start the autofilter LFO
+
+					audioAuthorized = true;
+				}
+			});
+
+			const socket = io();
+
+			socket.on("newImage", function(data) {
+				console.log("Received new data.");
+			});
 
 			function preload() {
 				img = loadImage("./images/fish.jpg");
@@ -96,11 +129,23 @@
 			    	m.x = getMouseAxis(true, false);
 			    	m.y = getMouseAxis(false, false);
 
-			        matte.push();
+			    	matte.push();
 		    		matte.blendMode(BLEND);
 			        matte.noStroke();
 			        matte.fill(255, 64);
+			        
 			        dist = constrain(m.dist(pm), 10, 80) * 10;
+			        if (audioAuthorized) {
+			        	let distForVolume = constrain(dist, 0, 500);
+			        	let newVolume = map(distForVolume, 0, 500, -10, 2);
+			        	noise.volume.value = newVolume;
+			        	
+			        	noise._playbackRate = dist / 500;
+			        	autoFilter.min = dist;
+			        	autoFilter.max = dist * 20;
+			        	console.log(noise.volume.value + ", " + dist);
+			        }
+
 			        matte.ellipse(m.x, m.y, dist);
 			        matte.ellipse(m.x, m.y, dist - 20);
 			        matte.ellipse(m.x, m.y, dist - 40);
