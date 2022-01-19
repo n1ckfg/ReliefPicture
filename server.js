@@ -18,7 +18,7 @@ const PORT = IS_HTTP ? PORT_HTTP : PORT_HTTPS;
 
 const PUBLIC_PATH = path.join(__dirname, "public");
 
-const updateInterval = 1000;
+const updateInterval = 3000;
 
 // allow cross-domain access (CORS)
 const app = express();
@@ -88,7 +88,122 @@ app.get("/", function(req, res) {
 });
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
+let query = "garage";
+let lineArtOnly = false;
+let numReturns = 1;
+let searchMode = 1;
+let hostDomain = "www.google.com";
+let queryPrepend = "/search?q="; //"/images?q=";
+let queryAppend = "&hl=en&tbm=isch"; //&imgsz=Medium";
+let queryLineArt = "&tbs=itp:lineart";
+let userAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36";
+let answerPrepend = "";
+let answerAppend = "";
+let answerOrig = "";
+let answer = "";
+let spaceBad = "%252520";
+let spaceGood = "%20";
+
+let photoPaths = [];
+
+function doSearch(_query) {
+    if (searchMode == 0) {
+        answerPrepend = "imgres?imgurl=";
+        answerAppend = "&amp;imgrefurl";        
+    } else if (searchMode == 1) {
+        answerPrepend = "\"ou\":\"";
+        answerAppend = "\",\"ow\":";        
+    }
+
+    if (lineArtOnly) queryAppend += queryLineArt;
+
+    //let numTries = 0;
+    let q = _query.replace(" ", "%20");
+    let url = queryPrepend + q + queryAppend;
+    console.log("Query is: " + hostDomain + url);
+
+    // TODO set user agent
+
+    let req, postOptions;
+    const photoDoDebug = false;
+
+    if (IS_HTTP) {
+        postOptions = {
+            hostname: hostDomain,
+            port: 80,
+            path: url,
+            method: "GET"
+        }
+
+        req = http.request(postOptions, res => {
+            console.log(`statusCode: ${res.statusCode}`);
+
+            res.on("data", d => {
+                parseSearchResults(d, photoDoDebug);
+            });
+        });
+    } else {
+        postOptions = {
+            hostname: hostDomain,
+            port: 443,
+            path: url,
+            method: "GET"
+        }
+
+        req = https.request(postOptions, res => {
+            console.log(`statusCode: ${res.statusCode}`);
+
+            res.on("data", d => {
+                parseSearchResults(d, photoDoDebug);
+            });
+        });
+    }
+
+    req.on("error", error => {
+        console.error(error);
+    });
+
+    req.end();
+}
+
+function parseSearchResults(data, doDebug) {
+    if (doDebug) {
+        process.stdout.write(data);
+    }
+
+    photoPaths = [];
+
+    /*
+    for (let property in data) {
+        answerOrig = data[property].toString();
+    }
+    */
+    answerOrig = data.toString();
+    console.log(answerOrig);
+
+    //while (numTries < numReturns) {
+    while (photoPaths.length < numReturns) {
+        answer = answerOrig;
+        let startIndex = answer.indexOf(answerPrepend);
+        answer = answer.substring(startIndex + answerPrepend.length);
+        let endIndex = answer.indexOf(answerAppend); //"imgrefurl");
+        answer = answer.substring(0, endIndex);//endIndex - 1);
+        answerOrig = answerOrig.replace(answerPrepend + answer + answerAppend, "");
+        answer = answer.replace(spaceBad, spaceGood);
+
+        if (answer != null) {
+            console.log("* " + answer);
+            photoPaths.push(answer);
+        }
+    }
+
+    if (photoPaths.length > 0) {
+        io.emit("newImage", photoPaths);        
+    } 
+}
+
+doSearch("mouse");
+
 setInterval(function() {
-    io.emit("newImage", "test");
-    console.log("Sending data.");
+
 }, updateInterval);
