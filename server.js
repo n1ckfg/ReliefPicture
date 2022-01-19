@@ -140,7 +140,7 @@ function doSearch(_query) {
 
     let req, postOptions;
 
-    if (IS_HTTP) {
+    //if (IS_HTTP) {
         postOptions = {
             hostname: hostDomain,
             port: 80,
@@ -155,6 +155,7 @@ function doSearch(_query) {
                 parseSearchResults(d, photoDoDebug);
             });
         });
+    /*
     } else {
         postOptions = {
             hostname: hostDomain,
@@ -171,6 +172,7 @@ function doSearch(_query) {
             });
         });
     }
+    */
 
     req.on("error", error => {
         console.error(error);
