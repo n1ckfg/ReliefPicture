@@ -18,7 +18,15 @@ const PORT = IS_HTTP ? PORT_HTTP : PORT_HTTPS;
 
 const PUBLIC_PATH = path.join(__dirname, "public");
 
-const updateInterval = 3000;
+let query = [
+"There was a little man who was a mouse",
+"There was a little man who had a house",
+"He went fee-diddly-dee"
+];
+
+let queryCounter = 0;
+const updateInterval = 10000;
+const photoDoDebug = false;
 
 // allow cross-domain access (CORS)
 const app = express();
@@ -88,15 +96,14 @@ app.get("/", function(req, res) {
 });
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
-let query = "garage";
 let lineArtOnly = false;
-let numReturns = 1;
-let searchMode = 1;
+let numReturns = 10;
+let searchMode = 2;
 let hostDomain = "www.google.com";
 let queryPrepend = "/search?q="; //"/images?q=";
 let queryAppend = "&hl=en&tbm=isch"; //&imgsz=Medium";
 let queryLineArt = "&tbs=itp:lineart";
-let userAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36";
+//let userAgent = "Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36";
 let answerPrepend = "";
 let answerAppend = "";
 let answerOrig = "";
@@ -107,25 +114,31 @@ let spaceGood = "%20";
 let photoPaths = [];
 
 function doSearch(_query) {
-    if (searchMode == 0) {
-        answerPrepend = "imgres?imgurl=";
-        answerAppend = "&amp;imgrefurl";        
-    } else if (searchMode == 1) {
-        answerPrepend = "\"ou\":\"";
-        answerAppend = "\",\"ow\":";        
+    switch (searchMode) {
+        case 0:
+            answerPrepend = "imgres?imgurl=";
+            answerAppend = "&amp;imgrefurl";  
+            break;
+        case 1:
+            answerPrepend = "\"ou\":\"";
+            answerAppend = "\",\"ow\":";      
+            break;
+        case 2:
+            answerPrepend = "http://t0.gstatic.com/images?";
+            answerAppend = "&amp;s";      
+            break;
     }
 
     if (lineArtOnly) queryAppend += queryLineArt;
 
     //let numTries = 0;
-    let q = _query.replace(" ", "%20");
+    let q = _query.replaceAll(" ", "%20");
     let url = queryPrepend + q + queryAppend;
     console.log("Query is: " + hostDomain + url);
 
     // TODO set user agent
 
     let req, postOptions;
-    const photoDoDebug = false;
 
     if (IS_HTTP) {
         postOptions = {
@@ -169,41 +182,36 @@ function doSearch(_query) {
 function parseSearchResults(data, doDebug) {
     if (doDebug) {
         process.stdout.write(data);
-    }
+    } else {
+        photoPaths = [];
 
-    photoPaths = [];
+        answerOrig = data.toString();
 
-    /*
-    for (let property in data) {
-        answerOrig = data[property].toString();
-    }
-    */
-    answerOrig = data.toString();
-    console.log(answerOrig);
+        for (let i=0; i<numReturns; i++) {
+            answer = answerOrig;
+            let startIndex = answer.indexOf(answerPrepend);
+            answer = answer.substring(startIndex + answerPrepend.length);
+            let endIndex = answer.indexOf(answerAppend); 
+            answer = answer.substring(0, endIndex);
+            answerOrig = answerOrig.replace(answerPrepend + answer + answerAppend, "");
+            answer = answer.replace(spaceBad, spaceGood);
 
-    //while (numTries < numReturns) {
-    while (photoPaths.length < numReturns) {
-        answer = answerOrig;
-        let startIndex = answer.indexOf(answerPrepend);
-        answer = answer.substring(startIndex + answerPrepend.length);
-        let endIndex = answer.indexOf(answerAppend); //"imgrefurl");
-        answer = answer.substring(0, endIndex);//endIndex - 1);
-        answerOrig = answerOrig.replace(answerPrepend + answer + answerAppend, "");
-        answer = answer.replace(spaceBad, spaceGood);
-
-        if (answer != null) {
-            console.log("* " + answer);
-            photoPaths.push(answer);
+            if (answer.charAt(0) === "q" && answer.charAt(1) === "=") {
+                answer = answerPrepend + answer;
+                console.log("* " + answer);
+                photoPaths.push(answer);
+            }
         }
-    }
 
-    if (photoPaths.length > 0) {
-        io.emit("newImage", photoPaths);        
-    } 
+        if (photoPaths.length > 0) {
+            const index = parseInt(Math.random() * photoPaths.length);
+            io.emit("newImage", photoPaths[index]);        
+        } 
+    }
 }
 
-doSearch("mouse");
-
 setInterval(function() {
-
+    doSearch(query[queryCounter]);
+    queryCounter++;
+    if (queryCounter > query.length - 1) queryCounter = 0;
 }, updateInterval);
