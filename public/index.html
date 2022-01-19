@@ -24,6 +24,9 @@
 			let sH = 800;
 			let m, pm, offset;
 			let dist = 0;
+			let displayText = "";
+			let textPosition;
+			let fontSize = 14;
 
 			// https://tonejs.github.io/docs/r13/Noise
 			let audioAuthorized = false;
@@ -53,8 +56,9 @@
 			const socket = io();
 
 			socket.on("newImage", function(data) {
-				loadImage(data, function(result) {
+				loadImage(data.url, function(result) {
 					img = result;
+					displayText = data.query;
 					initImage();
 				});
 				console.log("Received new url: " + data);
@@ -68,10 +72,12 @@
 			    createCanvas(windowHeight, windowHeight);
 		        background(0);
 		        pixelDensity(1);
-		        
+		        textFont("Arial", fontSize);
+
 		        offset = createVector(0, 0);
 		        m = createVector(0, 0);
 		        pm = createVector(0, 0);
+		        textPosition = createVector(100, 100);
 
 		       	initImage();
 		    }
@@ -177,6 +183,14 @@
 
 		        blendMode(ADD);
 		        image(pg, 0, 0, width, height);
+
+		        blendMode(BLEND);
+		        fill(0, 63);
+		        text(displayText, textPosition.x-4, textPosition.y+4);
+		        fill(0);
+		        text(displayText, textPosition.x-2, textPosition.y+2);
+		        fill(255);
+		        text(displayText, textPosition.x, textPosition.y);
 		    }
 
 			function windowResized() {

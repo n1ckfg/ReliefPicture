@@ -207,7 +207,11 @@ function parseSearchResults(data, doDebug) {
 
         if (photoPaths.length > 0) {
             const index = parseInt(Math.random() * photoPaths.length);
-            io.emit("newImage", photoPaths[index]);        
+            const message = {
+                "url": photoPaths[index],
+                "query": query[queryCounter]
+            }
+            io.emit("newImage", message);        
         } 
     }
 }
