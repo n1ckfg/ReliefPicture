@@ -25,7 +25,8 @@ let query = [
 ];
 
 let queryCounter = 0;
-const updateInterval = 10000;
+const updateIntervalBase = 5000;
+const updateIntervalAdjustment = 100; // per character in query
 const photoDoDebug = false;
 
 // allow cross-domain access (CORS)
@@ -220,4 +221,4 @@ setInterval(function() {
     doSearch(query[queryCounter]);
     queryCounter++;
     if (queryCounter > query.length - 1) queryCounter = 0;
-}, updateInterval);
+}, updateIntervalBase + (query[queryCounter].length * updateIntervalAdjustment));
