@@ -74,6 +74,14 @@
 		        pixelDensity(1);
 		        textFont("Arial", fontSize);
 
+		        imgCrop = createGraphics(sW, sH);
+		        matte = createGraphics(sW, sH);
+		        pg = createGraphics(sW, sH, WEBGL);
+
+		        matte.push();
+		        matte.background(0);
+		        matte.pop();
+
 		        offset = createVector(0, 0);
 		        m = createVector(0, 0);
 		        pm = createVector(0, 0);
@@ -93,17 +101,9 @@
 		        	offset.y = (img.height - img.width) / -2;
 		        }
 
-		        imgCrop = createGraphics(sW, sH);
 		        imgCrop.push();
 		        imgCrop.image(img, offset.x, offset.y);
 		        imgCrop.pop();
-
-		        pg = createGraphics(sW, sH, WEBGL);
-
-		        matte = createGraphics(sW, sH);
-		        matte.push();
-		        matte.background(0);
-		        matte.pop();
 
 		        h2n = new HeightToNormal(sW, sH);
 		        /*
@@ -173,9 +173,12 @@
 
 		        pg.push();
 		        pg.blendMode(BLEND);
-		        pg.image(imgCrop, -pg.width/2, -pg.height/2, pg.width, pg.height);
+		        pg.imageMode(CENTER);
+		        pg.background(0);
+		        pg.image(imgCrop, 0, 0);
 		        pg.blendMode(MULTIPLY);
-		        pg.image(matte, -pg.width/2, -pg.height/2, pg.width, pg.height);
+		        pg.imageMode(CORNER);
+		        pg.image(matte, -pg.width/2, -pg.height/2); //, pg.width, pg.height);
 		        pg.pop();
 
 		        blendMode(BLEND);
