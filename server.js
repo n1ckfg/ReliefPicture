@@ -72,8 +72,8 @@ let query = [
 ];
 
 let queryCounter = 0;
-const updateIntervalBase = 2000;
-const updateIntervalAdjustment = 100; // per character in query
+const updateIntervalBase = 1000;
+const updateIntervalAdjustment = 200; // per character in query
 const photoDoDebug = false;
 
 // allow cross-domain access (CORS)

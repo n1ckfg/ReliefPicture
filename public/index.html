@@ -22,7 +22,7 @@
 				constructor(_w, _h) {
 					this.w = _w;
 					this.h = _h;
-					this.minDist = 100;
+					this.minDist = 200;
 					this.click = false;
 					this.pos = createVector(Math.random() * this.w, Math.random() * this.h);
 					this.goal = createVector(0, 0);
@@ -35,7 +35,7 @@
 				}
 
 				run() {
-					this.pos.lerp(this.goal, constrain(Math.random(), 0.001, 0.1));
+					this.pos.lerp(this.goal, constrain(Math.random(), 0.001, 0.2));
 					if (this.pos.dist(this.goal) < this.minDist) this.init();
 					
 					const clickChange = Math.random();
