@@ -19,9 +19,48 @@ const PORT = IS_HTTP ? PORT_HTTP : PORT_HTTPS;
 const PUBLIC_PATH = path.join(__dirname, "public");
 
 let query = [
-"There was a little man who was a mouse",
-"There was a little man who had a house",
-"He went fee-diddly-dee"
+"A Taxonomy of the Universe",
+"(According to Conversations with GPT-2)",
+"EVERYTHING.",
+"An empty bottle of wine",
+"A box of cereal",
+"An old piece of furniture",
+"A Blu-ray disc",
+"A lawnmower",
+"A pair of underwear",
+"A nice shiny rock",
+"A small piece of cloth",
+"A large piece of rubber",
+"A piece of PVC pipe I had lying around",
+"A plastic bag",
+"THINGS THAT RESPOND TO STIMULI.",
+"Cnidaria",
+"Bryozoa",
+"Diatoms",
+"Echinoderms",
+"Phytoplankton",
+"Fungi",
+"Bryozoans",
+"An amoeba",
+"A paramecium",
+"THINGS THAT REMEMBER PAST STIMULI.",
+"Arthropods",
+"Amphibians",
+"Box jellies",
+"Snails",
+"THINGS THAT MODEL THEIR ENVIRONMENT TO PREDICT THE FUTURE.",
+"A bird",
+"An ape",
+"A dog",
+"A dolphin",
+"An elephant",
+"A bunch of really strange fish",
+"A deer trapped in a hole",
+"THINGS WHOSE PREDICTIVE MODEL OF THEIR ENVIRONMENT INCLUDES THEMSELVES.",
+"A child who is developing the conceptual frameworks that the adult world is full of.",
+"A child who experiences an increasing number of stimuli, most of which are challenging. ",
+"A child who copes with other people's criticisms.",
+"A child who learns how to deal with failure."
 ];
 
 let queryCounter = 0;
@@ -207,10 +246,12 @@ function parseSearchResults(data, doDebug) {
         }
 
         if (photoPaths.length > 0) {
-            const index = parseInt(Math.random() * photoPaths.length);
+            const urlIndex = parseInt(Math.random() * photoPaths.length);
+            const queryIndex = Math.min(Math.max(queryCounter-1, 0), query.length-1);
+
             const message = {
-                "url": photoPaths[index],
-                "query": query[queryCounter]
+                "url": photoPaths[urlIndex],
+                "query": query[queryIndex]
             }
             io.emit("newImage", message);        
         } 
