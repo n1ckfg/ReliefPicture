@@ -17,6 +17,39 @@
 		<script>
 			"use strict";
 
+			class Target {
+
+				constructor(_w, _h) {
+					this.w = _w;
+					this.h = _h;
+					this.minDist = 100;
+					this.click = false;
+					this.pos = createVector(Math.random() * this.w, Math.random() * this.h);
+					this.goal = createVector(0, 0);
+					this.init();	
+				}
+
+				init() {
+					this.goal.x = Math.random() * this.w;
+					this.goal.y = Math.random() * this.h;
+				}
+
+				run() {
+					this.pos.lerp(this.goal, constrain(Math.random(), 0.001, 0.1));
+					if (this.pos.dist(this.goal) < this.minDist) this.init();
+					
+					const clickChange = Math.random();
+					if (!this.click && clickChange < 0.5) {
+						this.click = true;
+					} else if (this.click && clickChange < 0.05) {
+						this.click = false;
+					}
+				}
+
+			}
+
+			let target;
+
 		    let pg, matte, imgCrop; // PGraphics
 			let img, normalMap; // PImage
 		    let h2n; // HeightToNormal
@@ -26,7 +59,7 @@
 			let dist = 0;
 			let displayText = "";
 			let textPosition;
-			let fontSize = 14;
+			let fontSize = 24;
 
 			// https://tonejs.github.io/docs/r13/Noise
 			let audioAuthorized = false;
@@ -34,24 +67,35 @@
 
 			document.addEventListener("mousedown", function() {
 				if (!audioAuthorized) {
-					Tone.start();
-
-					//initialize the noise and start
-					noise = new Tone.Noise("pink").start();
-
-					//make an autofilter to shape the noise
-					autoFilter = new Tone.AutoFilter({
-						"frequency" : "8m",
-						"min" : 800,
-						"max" : 15000
-					}).connect(Tone.Master);
-					
-					noise.connect(autoFilter); // connect the noise
-					autoFilter.start(); // start the autofilter LFO
-
-					audioAuthorized = true;
+					authorizeAudio();
 				}
 			});
+
+			document.addEventListener("keydown", function() {
+				if (!audioAuthorized) {
+					authorizeAudio();
+				}
+			});
+
+			function authorizeAudio() {
+				Tone.start();
+
+				//initialize the noise and start
+				noise = new Tone.Noise("pink").start();
+
+				//make an autofilter to shape the noise
+				autoFilter = new Tone.AutoFilter({
+					"frequency" : "8m",
+					"min" : 800,
+					"max" : 15000
+				}).connect(Tone.Master);
+				
+				noise.connect(autoFilter); // connect the noise
+				autoFilter.start(); // start the autofilter LFO
+
+				audioAuthorized = true;				
+			}
+
 
 			const socket = io();
 
@@ -73,6 +117,9 @@
 		        background(0);
 		        pixelDensity(1);
 		        textFont("Arial", fontSize);
+		        noCursor();
+
+		        target = new Target(sW, sH);
 
 		        imgCrop = createGraphics(sW, sH);
 		        matte = createGraphics(sW, sH);
@@ -126,10 +173,10 @@
 		    	let returns;
 
 		    	if (isX) {
-		    		returns = sW * (mouseX / width);
+		    		returns = target.pos.x; //sW * (mouseX / width);
 		    		if (isWebGl)  returns -= (sW / 2);
 		    	} else {
-		    		returns = sH * (mouseY / height);
+		    		returns = target.pos.y; //sH * (mouseY / height);
 		    		if (isWebGl)  returns -= (sH / 2);
 		    	}
 
@@ -137,7 +184,9 @@
 		    }
 
 		    function draw() {
-		    	if (mouseIsPressed) {
+		    	target.run();
+
+		    	if (target.click) { //mouseIsPressed) {
 		    		pm.x = m.x;
 		    		pm.y = m.y;
 			    	m.x = getMouseAxis(true, false);

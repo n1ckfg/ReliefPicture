@@ -19,6 +19,14 @@ const PORT = IS_HTTP ? PORT_HTTP : PORT_HTTPS;
 const PUBLIC_PATH = path.join(__dirname, "public");
 
 let query = [
+"... 8 ...",
+"... 7 ...",
+"... 6 ...",
+"... 5 ...",
+"... 4 ...",
+"... 3 ...",
+"... 2 ...",
+"... 1 ...",
 "A Taxonomy of the Universe",
 "(According to Conversations with GPT-2)",
 "EVERYTHING.",
@@ -64,7 +72,7 @@ let query = [
 ];
 
 let queryCounter = 0;
-const updateIntervalBase = 5000;
+const updateIntervalBase = 2000;
 const updateIntervalAdjustment = 100; // per character in query
 const photoDoDebug = false;
 
