@@ -1,6 +1,7 @@
 public/uploads/*
 public/sounds/sgm_plus/*
 public/demo/*
+.vs/*
 
 *.csr
 *.crt

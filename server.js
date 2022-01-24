@@ -1,22 +1,35 @@
 "use strict";
 
-const fs = require('fs');
-const path = require("path")
-const url = require('url');
-const assert = require("assert");
-const http = require("http");
-const https = require("https");
 const express = require("express");
+const app = express();
+
+const cmd = require("node-cmd");
+const crypto = require("crypto"); 
+const bodyParser = require("body-parser");
+
+const fs = require("fs");
 const dotenv = require("dotenv").config();
+const debug = process.env.DEBUG || "true";
 
-// this will be true if there's no .env file
-const IS_HTTP = (!process.env.PORT_HTTP);
+let options;
+if (!debug) {
+    options = {
+        key: fs.readFileSync(process.env.KEY_PATH),
+        cert: fs.readFileSync(process.env.CERT_PATH)
+    };
+}
 
-const PORT_HTTP = IS_HTTP ? (process.env.PORT || 3000) : (process.env.PORT_HTTP || 80);
-const PORT_HTTPS = process.env.PORT_HTTPS || 443;
-const PORT = IS_HTTP ? PORT_HTTP : PORT_HTTPS;
+const https = require("https").createServer(options, app);
+const http = require("http");
+const http_server = http.Server(app);
 
-const PUBLIC_PATH = path.join(__dirname, "public");
+// default -- pingInterval: 1000 * 25, pingTimeout: 1000 * 60
+// low latency -- pingInterval: 1000 * 5, pingTimeout: 1000 * 10
+let io;
+const ping_interval = 1000 * 5;
+const ping_timeout = 1000 * 10;
+const port_http = process.env.PORT_HTTP || 8080;
+const port_https = process.env.PORT_HTTPS || 443;
 
 let query = [
 "... 8 ...",
@@ -77,7 +90,6 @@ const updateIntervalAdjustment = 200; // per character in query
 const photoDoDebug = false;
 
 // allow cross-domain access (CORS)
-const app = express();
 app.use(function(req, res, next) {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -85,43 +97,29 @@ app.use(function(req, res, next) {
   return next();
 });
 
-// promote http to https:
-if (!IS_HTTP) {
-  http.createServer(function(req, res) {
+if (!debug) {
+    http.createServer(function(req, res) {
         res.writeHead(301, { "Location": "https://" + req.headers['host'] + req.url });
         res.end();
-    }).listen(PORT_HTTP);
+    }).listen(port_http);
+
+    io = require("socket.io")(https, { 
+        pingInterval: ping_interval,
+        pingTimeout: ping_timeout
+    });
+} else {
+    io = require("socket.io")(http_server, { 
+        pingInterval: ping_interval,
+        pingTimeout: ping_timeout
+    });
 }
 
-// create the primary server:
-const server = IS_HTTP ? http.createServer(app) : https.createServer({
-    key: fs.readFileSync(process.env.KEY_PATH),
-    cert: fs.readFileSync(process.env.CERT_PATH)
-}, app);
-
-// serve static files from PUBLIC_PATH:
-app.use(express.static(PUBLIC_PATH)); 
-// default to index.html if no file given:
-app.get("/", function(req, res) {
-    res.sendFile(path.join(PUBLIC_PATH, "index.html"))
-});
-
-// start the server:
-server.listen(PORT, function() {
-    console.log("\nNode.js listening on port " + PORT);
-});
-
-const io = require("socket.io")(server, { 
-    pingInterval: 5000,
-    pingTimeout: 10000
-});
+// ~ ~ ~ ~
+    
+app.use(express.static("public")); 
 
 // ~ ~ ~ ~ ~ ~   WEBHOOK   ~ ~ ~ ~ ~ ~ 
 // https://opensourcelibs.com/lib/glitchub
-const cmd = require("node-cmd");
-const crypto = require("crypto"); 
-const bodyParser = require("body-parser");
-
 app.use(bodyParser.json());
 
 const onWebhook = (req, res) => {
@@ -142,6 +140,19 @@ app.post("/redeploy", onWebhook);
 app.get("/", function(req, res) {
     res.sendFile(__dirname + "/public/index.html");
 });
+
+
+if (!debug) {
+    https.listen(port_https, function() {
+        console.log("\nNode.js listening on https port " + port_https);
+    });
+} else {
+    http_server.listen(port_http, function() {
+        console.log("\nNode.js listening on http port " + port_http);
+    });
+}
+
+// ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ 
 
 let lineArtOnly = false;
